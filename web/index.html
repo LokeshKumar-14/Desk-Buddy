@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Buddy — ESP32-S3 Smart Display</title>
+<meta name="description" content="Smart Buddy: an open-source ESP32-S3 + LVGL smart display with phone control. Build it, learn from it, and turn it into a business.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a1220; --ink:#eaf1fb; --mute:#8fa3bf;
+  --glass:rgba(255,255,255,.06); --glass-b:rgba(255,255,255,.14);
+  --accent:#ffb454; --accent2:#4fd1c5; --r:22px;
+  --head:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --body:'Instrument Sans','Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--body);color:var(--ink);background:var(--bg);line-height:1.6;overflow-x:hidden;
+  background-image:radial-gradient(900px 500px at 85% -5%,rgba(79,209,197,.18),transparent 60%),
+  radial-gradient(800px 500px at -10% 30%,rgba(255,180,84,.12),transparent 60%),
+  radial-gradient(900px 600px at 70% 100%,rgba(90,110,255,.14),transparent 60%);
+  background-attachment:fixed}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1140px;margin:0 auto;padding:0 22px}
+.glass{background:var(--glass);border:1px solid var(--glass-b);border-radius:var(--r);
+  backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+  box-shadow:0 20px 50px -25px rgba(0,0,0,.7)}
+h1,h2,h3{font-family:var(--head);line-height:1.1;letter-spacing:-.02em}
+h2{font-size:clamp(28px,4vw,44px);font-weight:800;margin-bottom:10px}
+.sub{color:var(--mute);max-width:62ch;margin-bottom:34px}
+section{padding:72px 0}
+
+.banner{margin:14px auto 0;max-width:1140px;padding:0 22px}
+.banner div{padding:11px 20px;text-align:center;font-size:14.5px;border-radius:999px;background:linear-gradient(90deg,rgba(255,180,84,.18),rgba(79,209,197,.14));border:1px solid rgba(255,180,84,.35)}
+.banner a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+
+nav{position:sticky;top:12px;z-index:50;margin:12px auto 0;max-width:1140px;padding:0 22px}
+nav .glass{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 10px 20px;border-radius:999px}
+.logo{font-family:var(--head);font-weight:800;font-size:19px}
+.logo i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent);margin-right:8px;box-shadow:0 0 14px var(--accent)}
+nav ul{display:flex;gap:20px;list-style:none;font-size:14px;color:var(--mute)}
+nav ul a:hover{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:999px;font-weight:600;font-size:15px;border:1px solid var(--glass-b);cursor:pointer;transition:transform .15s,background .2s;font-family:var(--body);color:var(--ink);background:var(--glass)}
+.btn:hover{background:rgba(255,255,255,.12)}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--accent);color:#1a1205;border-color:transparent}
+.btn.pri:hover{background:#ffc274}
+nav .btn{padding:9px 20px}
+@media(max-width:980px){nav ul{display:none}}
+
+.hero{padding:60px 0 30px}
+.hero .wrap{display:grid;grid-template-columns:1.05fr 1fr;gap:46px;align-items:center}
+.hero h1{font-size:clamp(40px,6.4vw,78px);font-weight:800}
+.hero p{color:var(--mute);font-size:18px;margin:22px 0 30px;max-width:48ch}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
+.chip{padding:6px 14px;border-radius:999px;font-size:13px;border:1px solid var(--glass-b);background:var(--glass);color:var(--mute)}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+.device{position:relative;padding:14px;border-radius:30px;transform:rotate(-2deg)}
+.device .scr{aspect-ratio:800/480;border-radius:16px;overflow:hidden;background:#050a14;position:relative}
+.device img,.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.phone{position:absolute;right:-14px;bottom:-34px;width:34%;aspect-ratio:9/16;border-radius:22px;padding:7px;transform:rotate(4deg);background:rgba(14,24,42,.85)}
+.phone .scr{aspect-ratio:auto;height:100%;border-radius:16px}
+.ph{display:grid;place-items:center;height:100%;width:100%;color:var(--mute);font-size:13px;text-align:center;padding:10px}
+@media(max-width:900px){.hero .wrap{grid-template-columns:1fr}.device{margin:20px 14px 40px 0}}
+
+.specs{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+.big{padding:24px}
+.big b{display:block;font-family:var(--head);font-size:34px;font-weight:800;color:var(--accent)}
+.big span{color:var(--mute);font-size:14px}
+.tbl{padding:8px 26px}
+.tbl div{display:grid;grid-template-columns:200px 1fr;gap:14px;padding:15px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.tbl div:last-child{border:0}
+.tbl dt{color:var(--mute)}.tbl dd{font-weight:500}
+@media(max-width:800px){.specs{grid-template-columns:1fr 1fr}.tbl div{grid-template-columns:1fr;gap:2px}}
+
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.cards.two{grid-template-columns:repeat(2,1fr)}
+.cards .glass{padding:26px}
+.cards h3{font-size:20px;margin:14px 0 6px;font-weight:700}
+.cards p{color:var(--mute);font-size:15px}
+.cards .tag{display:inline-block;margin-top:14px;font-size:12.5px;padding:4px 12px;border-radius:999px;background:rgba(255,180,84,.12);border:1px solid rgba(255,180,84,.3);color:#ffd8a1}
+.ic{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:21px;background:rgba(79,209,197,.14);border:1px solid rgba(79,209,197,.35)}
+@media(max-width:900px){.cards{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.cards,.cards.two{grid-template-columns:1fr}}
+
+.tabs{display:inline-flex;padding:5px;border-radius:999px;margin-bottom:26px}
+.tabs button{border:0;background:none;color:var(--mute);padding:10px 22px;border-radius:999px;font:600 14px var(--body);cursor:pointer}
+.tabs button.on{background:var(--ink);color:#0a1220}
+.grid{display:grid;gap:12px}
+.grid.hw{grid-template-columns:repeat(3,1fr)}
+.grid.web{grid-template-columns:repeat(6,1fr)}
+.shot{border-radius:16px;overflow:hidden;border:1px solid var(--glass-b);cursor:zoom-in;background:var(--glass);transition:transform .2s}
+.shot:hover{transform:translateY(-4px)}
+.grid.hw .shot{aspect-ratio:800/480}
+.grid.web .shot{aspect-ratio:9/16}
+@media(max-width:900px){.grid.web{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.grid.hw{grid-template-columns:1fr 1fr}}
+#lb{position:fixed;inset:0;background:rgba(4,8,16,.88);backdrop-filter:blur(10px);display:none;place-items:center;z-index:100;padding:20px}
+#lb.on{display:grid}
+#lb img{max-width:100%;max-height:88vh;border-radius:14px;border:1px solid var(--glass-b)}
+#lb button{position:absolute;top:18px;right:22px;font-size:30px;background:none;border:0;color:#fff;cursor:pointer}
+
+.steps{display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start}
+.stepnav{padding:10px;position:sticky;top:90px}
+.stepnav button{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:none;color:var(--mute);padding:13px 14px;border-radius:14px;font:500 15px var(--body);cursor:pointer}
+.stepnav button b{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1px solid var(--glass-b);font-size:12px;flex:none}
+.stepnav button.on{background:rgba(255,255,255,.1);color:var(--ink)}
+.stepnav button.on b{background:var(--accent);color:#1a1205;border-color:transparent}
+.panel{padding:30px;display:none;min-height:340px}
+.panel.on{display:block}
+.panel h3{font-size:26px;margin-bottom:12px;font-weight:700}
+.panel p,.panel li{color:var(--mute)}
+.panel ol,.panel ul{padding-left:20px;display:grid;gap:8px;margin:12px 0}
+.panel li b,.panel p b{color:var(--ink);font-weight:600}
+code{font-family:Consolas,monospace;font-size:13.5px;background:rgba(255,255,255,.09);padding:2px 8px;border-radius:7px;color:var(--accent2)}
+.set{display:grid;gap:8px;margin-top:14px}
+.set div{display:flex;justify-content:space-between;gap:14px;padding:12px 16px;border-radius:14px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.07);font-size:14px}
+.set span{color:var(--mute)}.set b{text-align:right;color:var(--ink)}
+.warn{margin-top:16px;padding:14px 16px;border-radius:14px;background:rgba(255,180,84,.1);border:1px solid rgba(255,180,84,.35);color:#ffd8a1;font-size:14px}
+@media(max-width:860px){.steps{grid-template-columns:1fr}.stepnav{position:static;display:flex;overflow-x:auto;gap:4px}.stepnav button{white-space:nowrap;width:auto}}
+
+.links{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:22px}
+.link{display:block;padding:20px 22px;transition:background .2s}
+.link:hover{background:rgba(255,255,255,.11)}
+.link b{display:block;font-family:var(--head);font-size:18px;margin-bottom:4px}
+.link span{color:var(--mute);font-size:14px}
+@media(max-width:700px){.links{grid-template-columns:1fr}}
+.play{margin-top:26px;padding:30px;display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:linear-gradient(135deg,rgba(255,180,84,.12),rgba(79,209,197,.08))}
+.play h3{font-size:24px;margin-bottom:6px}
+.play p{color:var(--mute);max-width:56ch}
+
+.pgrid{display:grid;grid-template-columns:1fr 1.3fr;gap:20px;align-items:start}
+.pgrid .glass{padding:26px}
+.pgrid h3{font-size:22px;margin-bottom:10px}
+.pgrid ol{padding-left:20px;display:grid;gap:10px;color:var(--mute)}
+.pgrid li b{color:var(--ink)}
+.pbox{display:flex;flex-direction:column;gap:12px}
+select,textarea{width:100%;background:rgba(0,0,0,.3);color:var(--ink);border:1px solid var(--glass-b);border-radius:14px;padding:12px 14px;font:14px/1.55 var(--body);color-scheme:dark}
+select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:44px;background-color:#0f1b30;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ffb454' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat:no-repeat;background-position:right 16px center}
+select:hover{border-color:rgba(255,180,84,.6)}
+select option,select optgroup{background:#0f1b30;color:#eaf1fb}
+select optgroup{color:#ffb454;font-style:normal;font-weight:700}
+.model{display:flex;flex-direction:column}
+.model ul{padding-left:18px;display:grid;gap:6px;color:var(--mute);font-size:14.5px;margin-top:12px}
+.model .price{margin-top:auto;padding-top:16px;font-family:var(--head);font-weight:700;font-size:18px;color:var(--accent)}
+.model .price small{display:block;font-family:var(--body);font-weight:400;font-size:12.5px;color:var(--mute)}
+.note{margin-top:16px;padding:14px 16px;border-radius:14px;background:rgba(79,209,197,.08);border:1px solid rgba(79,209,197,.3);color:#b8f0ea;font-size:14px}
+textarea{min-height:330px;resize:vertical;font-family:Consolas,monospace;font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:900px){.pgrid{grid-template-columns:1fr}}
+
+.dl{padding:50px 34px;text-align:center;background:linear-gradient(135deg,rgba(255,180,84,.13),rgba(79,209,197,.1))}
+.dl .sub{margin:0 auto 26px}
+.tbs{display:grid;gap:12px}
+details{padding:18px 22px}
+summary{cursor:pointer;font-weight:600;list-style:none}
+summary::-webkit-details-marker{display:none}
+details p{color:var(--mute);margin-top:10px;font-size:15px}
+footer{padding:40px 0 60px;text-align:center;color:var(--mute);font-size:14px}
+footer a{color:var(--accent2)}
+:focus-visible{outline:2px solid var(--accent2);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<div class="banner"><div>Start your own business or startup with it: one ESP32 screen, one web page, one idea. <a href="#business">See business ideas</a></div></div>
+
+<nav><div class="glass">
+  <a href="#top" class="logo"><i></i>Smart Buddy</a>
+  <ul>
+    <li><a href="#specs">Specs</a></li><li><a href="#features">Features</a></li><li><a href="#gallery">Gallery</a></li>
+    <li><a href="#setup">Setup</a></li><li><a href="#learn">Learn</a></li><li><a href="#business">Business</a></li><li><a href="#marketing">Marketing</a></li><li><a href="#home">Home</a></li><li><a href="#claude">Build with Claude</a></li>
+  </ul>
+  <a class="btn pri js-gh" href="#">Get the code</a>
+</div></nav>
+
+<header class="hero" id="top"><div class="wrap">
+  <div>
+    <div class="chips"><span class="chip">ESP32-S3</span><span class="chip">LVGL</span><span class="chip">800×480</span><span class="chip">Phone controlled</span><span class="chip">Open source</span></div>
+    <h1>Smart Buddy: a smart display you build once and use for anything.</h1>
+    <p>Clock, weather, calendar, to-do list, photo gallery and timer on a glass-style touchscreen. Control it all from your phone's browser, with no cable and no extra server.</p>
+    <div class="cta"><a class="btn pri js-gh" href="#">Download the project</a><a class="btn" href="#setup">Read the setup guide</a></div>
+  </div>
+  <div class="device glass">
+    <div class="scr"><img data-f="pichard" data-n="1" alt="Smart Buddy dashboard on the 7 inch display"></div>
+    <div class="phone glass"><div class="scr"><img data-f="picsoft" data-n="1" alt="Smart Buddy web page on a phone"></div></div>
+  </div>
+</div></header>
+
+<section id="specs"><div class="wrap">
+  <h2>Hardware specifications</h2>
+  <p class="sub">Elecrow CrowPanel 7.0" HMI display. Smart Buddy is built specifically for this board.</p>
+  <div class="specs">
+    <div class="glass big"><b>800×480</b><span>Resolution</span></div>
+    <div class="glass big"><b>4 MB</b><span>Flash</span></div>
+    <div class="glass big"><b>8 MB</b><span>PSRAM (OPI)</span></div>
+    <div class="glass big"><b>7.0"</b><span>Capacitive touch</span></div>
+  </div>
+  <dl class="glass tbl">
+    <div><dt>Model</dt><dd>Elecrow 7.0 inch HMI Display (CrowPanel ESP32 Display)</dd></div>
+    <div><dt>Main processor</dt><dd>ESP32-S3-WROOM-1-N4R8</dd></div>
+    <div><dt>Touch</dt><dd>Capacitive touch screen, TN panel</dd></div>
+    <div><dt>Screen</dt><dd>TFT-LCD</dd></div>
+    <div><dt>Display driver</dt><dd>EK9716BD3 &amp; EK73002ACGB</dd></div>
+    <div><dt>Power supply</dt><dd>External DC 5V, 2A</dd></div>
+    <div><dt>Interfaces</dt><dd>2× UART0, 2× GPIO, 2× I2C, 1× battery, TF card slot, USB, speaker</dd></div>
+    <div><dt>Buttons</dt><dd>BOOT button and Reset button</dd></div>
+    <div><dt>Active area</dt><dd>153.84 × 85.63 mm (W × H)</dd></div>
+    <div><dt>Works with</dt><dd>Arduino IDE, ESP-IDF, PlatformIO, MicroPython, LVGL, SquareLine Studio</dd></div>
+  </dl>
+</div></section>
+
+<section id="features"><div class="wrap">
+  <h2>What's inside</h2>
+  <p class="sub">Everything runs on the ESP32 itself. No separate computer or cloud server needed.</p>
+  <div class="cards">
+    <div class="glass"><div class="ic">🕒</div><h3>Clock and calendar</h3><p>Time synced over NTP, the date, and a real month calendar with today highlighted.</p></div>
+    <div class="glass"><div class="ic">⛅</div><h3>Live weather</h3><p>Set your city from your phone. See temperature, condition and humidity with the last update time.</p></div>
+    <div class="glass"><div class="ic">✅</div><h3>To-do manager</h3><p>Add tasks from your phone. Completed tasks move down and are deleted automatically after 12 hours.</p></div>
+    <div class="glass"><div class="ic">🖼️</div><h3>Photo gallery</h3><p>Slideshow from the SD card with previous, next, pause and delete with confirmation.</p></div>
+    <div class="glass"><div class="ic">🎨</div><h3>Wallpapers and themes</h3><p>Change the wallpaper with the BG button. Dark Glass and Light Glass themes are saved across reboots.</p></div>
+    <div class="glass"><div class="ic">⏱️</div><h3>Timer</h3><p>Countdown with pause, resume, reset and Pomodoro presets. No internet needed.</p></div>
+  </div>
+</div></section>
+
+<section id="gallery"><div class="wrap">
+  <h2>Photos</h2>
+  <p class="sub">Tap any photo to view it larger.</p>
+  <div class="tabs glass" role="tablist">
+    <button class="on" data-g="hw" role="tab">Display screen</button>
+    <button data-g="web" role="tab">Phone web page</button>
+  </div>
+  <div class="grid hw" id="g-hw"></div>
+  <div class="grid web" id="g-web" hidden></div>
+</div></section>
+
+<section id="setup"><div class="wrap">
+  <h2>Setup guide</h2>
+  <p class="sub">Step by step. You only need to do this once.</p>
+  <div class="steps">
+    <div class="glass stepnav" id="sn"></div>
+    <div id="sp"></div>
+  </div>
+</div></section>
+
+<section id="learn"><div class="wrap">
+  <h2>Learn how it works</h2>
+  <p class="sub">Smart Buddy is made from a few well-known tools. Understand each one and you can build your own screens.</p>
+  <div class="cards">
+    <div class="glass"><div class="ic">🧩</div><h3>LVGL</h3><p>A free graphics library for embedded screens. It draws buttons, lists, calendars, charts and animations, and handles touch input. Smart Buddy's whole interface is built with it.</p></div>
+    <div class="glass"><div class="ic">🖥️</div><h3>LovyanGFX</h3><p>The display driver layer. It talks to the RGB panel and the touch chip so LVGL can put pixels on the 800×480 screen at a good frame rate.</p></div>
+    <div class="glass"><div class="ic">✏️</div><h3>SquareLine Studio</h3><p>A drag-and-drop designer for LVGL. Design screens visually, then export C code. Elecrow supports it directly for this board.</p></div>
+  </div>
+  <div class="links">
+    <a class="glass link" href="https://docs.lvgl.io" target="_blank" rel="noopener"><b>LVGL documentation</b><span>Widgets, styles, events and porting guides.</span></a>
+    <a class="glass link" href="https://lvgl.io" target="_blank" rel="noopener"><b>LVGL website</b><span>Demos, news and the community forum.</span></a>
+    <a class="glass link" href="https://squareline.io" target="_blank" rel="noopener"><b>SquareLine Studio</b><span>Design LVGL screens visually and export code.</span></a>
+    <a class="glass link" href="https://github.com/lovyan03/LovyanGFX" target="_blank" rel="noopener"><b>LovyanGFX on GitHub</b><span>Display and touch driver library with examples.</span></a>
+    <a class="glass link" href="https://docs.espressif.com/projects/arduino-esp32/en/latest/" target="_blank" rel="noopener"><b>ESP32 Arduino docs</b><span>Wi-Fi, web server, SD card and the core reference.</span></a>
+    <a class="glass link" href="https://www.youtube.com/results?search_query=LVGL+ESP32+tutorial" target="_blank" rel="noopener"><b>YouTube: LVGL on ESP32</b><span>Search results for LVGL beginner tutorials.</span></a>
+    <a class="glass link" href="https://www.youtube.com/results?search_query=SquareLine+Studio+tutorial" target="_blank" rel="noopener"><b>YouTube: SquareLine Studio</b><span>Search results for design-to-code tutorials.</span></a>
+    <a class="glass link" href="https://www.youtube.com/results?search_query=Elecrow+CrowPanel+7+inch+LVGL" target="_blank" rel="noopener"><b>YouTube: CrowPanel 7.0"</b><span>Videos about this exact display.</span></a>
+  </div>
+  <div class="glass play">
+    <div><h3>Watch the full playlist</h3><p>A playlist that shows how to run this project and how to design screens with SquareLine Studio, from first upload to your own UI.</p></div>
+    <a class="btn pri" id="playlist" href="#" target="_blank" rel="noopener">Open the playlist</a>
+  </div>
+</div></section>
+
+<section id="business"><div class="wrap">
+  <h2>Turn it into a business</h2>
+  <p class="sub">A screen, a web page and a local network are enough to build a product that real shops and offices will pay for. Here are ideas you can start with.</p>
+  <div class="cards two">
+    <div class="glass"><div class="ic">🍽️</div><h3>Restaurant order screen</h3><p>The ESP32 hosts the menu as a web page. Customers scan a QR code at the table, add items to the cart and place an order. The order appears on the screen in the kitchen or at the counter, with a new-order alert.</p><span class="tag">Sell to restaurants, dhabas, food courts</span></div>
+    <div class="glass"><div class="ic">☕</div><h3>Cafe token and order-ready board</h3><p>Customers get a token number. The counter marks orders ready from a phone, and the screen shows "Now serving" and "Ready" lists for everyone to see.</p><span class="tag">Sell to cafes, bakeries, juice bars</span></div>
+    <div class="glass"><div class="ic">🏥</div><h3>Clinic and salon queue</h3><p>Visitors scan a QR code to join the queue. The display shows the current number, the next few numbers and the estimated wait. Staff manage it from a phone.</p><span class="tag">Sell to clinics, salons, repair shops</span></div>
+    <div class="glass"><div class="ic">🏷️</div><h3>Shop offers and price board</h3><p>The owner updates today's deals, prices and photos from a phone. The screen shows them as a slideshow with a clock and weather. No printing, no designer.</p><span class="tag">Sell to retail shops and showrooms</span></div>
+    <div class="glass"><div class="ic">🏠</div><h3>Hostel and PG notice board</h3><p>Show the mess menu, notices, timings and Wi-Fi details. The warden edits everything from a phone and residents just look at the screen.</p><span class="tag">Sell to hostels, PGs, coaching centres</span></div>
+    <div class="glass"><div class="ic">🏢</div><h3>Office desk and room status</h3><p>Show meeting-room bookings, a team to-do list, a timer for stand-ups and a clock. Switch a room between "Free" and "Busy" with one tap.</p><span class="tag">Sell to offices, co-working spaces</span></div>
+  </div>
+  <div class="glass" style="padding:28px;margin-top:16px">
+    <h3 style="font-size:22px;margin-bottom:8px">How to make money from it</h3>
+    <p style="color:var(--mute)">Build the product once, then sell it many times. Charge a one-time setup fee for the hardware and installation, and a small monthly fee for menu updates, support and new features. Think about it, build it, and ship it: your first customer is usually one shop away.</p>
+  </div>
+</div></section>
+
+<section id="marketing"><div class="wrap">
+  <h2>How to sell it and earn from it</h2>
+  <p class="sub">Pick a model that fits your customers. You can start with one and add the others later.</p>
+  <div class="cards">
+    <div class="glass model"><div class="ic">🔁</div><h3>Monthly subscription</h3><p>The customer pays a small fee every month and you keep the product running.</p>
+      <ul><li>Menu, price and offer updates</li><li>Phone and WhatsApp support</li><li>New features and fixes</li><li>Replacement if the unit fails</li></ul>
+      <div class="price">Example: ₹299 – ₹999 per month<small>Example only. Set your own price.</small></div></div>
+    <div class="glass model"><div class="ic">💼</div><h3>One-time sale, paid updates</h3><p>Sell the finished device once. If the customer later wants changes, they pay you for each update.</p>
+      <ul><li>One price for hardware, setup and installation</li><li>Paid feature packs, such as a new menu layout</li><li>Optional yearly support plan</li><li>Good for customers who dislike monthly bills</li></ul>
+      <div class="price">Example: ₹8,000 – ₹15,000 once<small>Plus updates when they ask. Example only.</small></div></div>
+    <div class="glass model"><div class="ic">🤝</div><h3>Hybrid: setup fee plus support</h3><p>Charge once for setup, then offer an annual support contract that covers updates and visits.</p>
+      <ul><li>Lower monthly cost than pure subscription</li><li>Steady yearly income</li><li>Customer can skip support and pay per update</li><li>Easy to explain to a shop owner</li></ul>
+      <div class="price">Example: setup fee + ₹3,000 – ₹6,000 per year<small>Example only. Set your own price.</small></div></div>
+  </div>
+  <div class="note">Tip: always tell the customer what is included in the price, how long support lasts and what an update costs. A clear offer closes faster than a cheap one.</div>
+
+  <h3 style="font-size:24px;margin:44px 0 14px">How to find your first customers</h3>
+  <div class="cards">
+    <div class="glass"><div class="ic">📍</div><h3>Start with one local shop</h3><p>Set up a free or discounted demo at one restaurant or cafe nearby. A real screen on a real counter sells better than any slide.</p></div>
+    <div class="glass"><div class="ic">🎬</div><h3>Show it in action</h3><p>Record short videos of a customer scanning the QR code and the order appearing on the screen. Post them on Instagram, YouTube Shorts and WhatsApp status.</p></div>
+    <div class="glass"><div class="ic">🎁</div><h3>Offer a free trial week</h3><p>Let the owner use it for 7 days. Once the staff are used to it, most owners keep it.</p></div>
+    <div class="glass"><div class="ic">🗣️</div><h3>Ask for referrals</h3><p>Give happy customers a small discount for each shop they refer. Shop owners trust other shop owners.</p></div>
+    <div class="glass"><div class="ic">📇</div><h3>Look professional</h3><p>Make a simple Google Business profile, a visiting card with a demo QR code, and a one-page price list.</p></div>
+    <div class="glass"><div class="ic">📈</div><h3>Show the benefit</h3><p>Talk about saved time, fewer order mistakes and happier customers, not about ESP32 or LVGL. Owners buy results.</p></div>
+  </div>
+</div></section>
+
+<section id="home"><div class="wrap">
+  <h2>Automate your home</h2>
+  <p class="sub">The same display can become a control panel for your house. Add relays, sensors and the phone web page, and control everything from the wall or from your phone.</p>
+  <div class="cards">
+    <div class="glass"><div class="ic">💡</div><h3>Lights, fans and scenes</h3><p>Switch lights and fans from the touchscreen or phone. Add scenes like "Good night" that turn everything off at once.</p><span class="tag">ESP32 + relay modules</span></div>
+    <div class="glass"><div class="ic">🌡️</div><h3>Climate panel</h3><p>Show room temperature and humidity on the screen with the DHT20 sensor from the original Elecrow example. Turn on a fan when it gets too hot.</p><span class="tag">DHT20 sensor</span></div>
+    <div class="glass"><div class="ic">🚪</div><h3>Door and security status</h3><p>See which doors and windows are open. Show an alert on the screen and on your phone page when something changes.</p><span class="tag">Reed switches, PIR sensor</span></div>
+    <div class="glass"><div class="ic">🚰</div><h3>Water tank and motor control</h3><p>Show the tank level and start or stop the pump automatically. Add a dry-run protection timer.</p><span class="tag">Level sensor + relay</span></div>
+    <div class="glass"><div class="ic">🌱</div><h3>Garden and plants</h3><p>Read soil moisture and water your plants on a schedule. Show the next watering time on the screen.</p><span class="tag">Soil sensor + pump</span></div>
+    <div class="glass"><div class="ic">⚡</div><h3>Energy monitor</h3><p>Track power use of an appliance and show daily usage and a simple bill estimate.</p><span class="tag">Current sensor module</span></div>
+  </div>
+  <div class="note" style="border-color:rgba(255,180,84,.4);background:rgba(255,180,84,.08);color:#ffd8a1">Safety: switching mains voltage (230V) is dangerous. Use certified, properly rated relay modules in an insulated enclosure, and ask a qualified electrician to do any mains wiring. Test with low-voltage loads first.</div>
+</div></section>
+
+<section id="claude"><div class="wrap">
+  <h2>Build your own version with Claude</h2>
+  <p class="sub">The Desk Buddy ZIP already has the correct libraries, display setup and frame rate. Give that ZIP to Claude with a good prompt and it can build your idea on top of a working base.</p>
+  <div class="pgrid">
+    <div class="glass">
+      <h3>How to do it</h3>
+      <ol>
+        <li><b>Download the ZIP</b> from the GitHub repo using the button below.</li>
+        <li><b>Open Claude</b> and start a new chat.</li>
+        <li><b>Attach the ZIP</b> to the chat.</li>
+        <li><b>Pick your idea</b> on the right, edit it if you like, then copy the prompt.</li>
+        <li><b>Paste and send.</b> Claude reads the ZIP and builds a new project for your idea.</li>
+      </ol>
+      <p style="color:var(--mute);margin-top:14px;font-size:14px">Why the ZIP matters: it keeps the exact library versions, pin setup, display configuration and frame rate that already work on your board. Claude reuses them instead of guessing.</p>
+      <div class="row" style="margin-top:18px">
+        <a class="btn pri js-gh" href="#">Open the repository</a>
+        <a class="btn" href="https://claude.ai" target="_blank" rel="noopener">Open Claude</a>
+      </div>
+    </div>
+    <div class="glass pbox">
+      <label for="idea" style="font-weight:600">Choose a starting idea</label>
+      <select id="idea">
+        <optgroup label="Business ideas">
+          <option value="restaurant">Restaurant QR menu and kitchen order screen</option>
+          <option value="cafe">Cafe token and order-ready board</option>
+          <option value="queue">Clinic or salon queue display</option>
+          <option value="offers">Shop offers and price board</option>
+          <option value="hostel">Hostel notice board with mess menu</option>
+          <option value="office">Office room status and team board</option>
+        </optgroup>
+        <optgroup label="Home automation">
+          <option value="homectl">Home control panel: lights, fans and scenes</option>
+          <option value="climate">Climate panel with temperature and humidity</option>
+          <option value="security">Door and security status panel</option>
+          <option value="water">Water tank and motor controller</option>
+          <option value="garden">Garden watering controller</option>
+          <option value="energy">Energy usage monitor</option>
+        </optgroup>
+        <optgroup label="Your own">
+          <option value="custom">My own idea (edit the prompt)</option>
+        </optgroup>
+      </select>
+      <textarea id="prompt" spellcheck="false" aria-label="Prompt for Claude"></textarea>
+      <div class="row"><button class="btn pri" id="copy">Copy prompt</button><span id="copied" style="color:var(--accent2);align-self:center;font-size:14px"></span></div>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="glass dl">
+    <h2>Get the project</h2>
+    <p class="sub">Download the ZIP from GitHub, extract it and follow the setup guide above.</p>
+    <a class="btn pri js-gh" href="#">Open on GitHub</a>
+  </div>
+</div></section>
+
+<section id="help" style="padding-top:20px"><div class="wrap">
+  <h2>Having trouble?</h2>
+  <p class="sub">Common problems and quick fixes.</p>
+  <div class="tbs">
+    <details class="glass"><summary>The screen stays black</summary><p>Check that PSRAM is set to <code>OPI PSRAM</code> and the partition scheme is <code>Huge APP</code>. Power the board with 5V 2A. Make sure your LVGL, LovyanGFX and ESP32 core versions match the project.</p></details>
+    <details class="glass"><summary>I get a compile error</summary><p>Install ESP32 core exactly <code>2.0.14</code>. Copy the project's <code>library</code> contents into your Arduino libraries folder and restart the Arduino IDE.</p></details>
+    <details class="glass"><summary>The web page does not open on my phone</summary><p>The phone and the display must be on the same Wi-Fi. Type the IP address shown on the screen into your browser with <code>http://</code> in front. If you use a phone hotspot, keep it on the 2.4 GHz band.</p></details>
+    <details class="glass"><summary>Photos or wallpapers are missing</summary><p>Format the SD card as FAT32. Keep photos in <code>/SmartBuddy/images/</code> and wallpapers in <code>/SmartBuddy/backgrounds/</code>. Unsupported or corrupt files are skipped.</p></details>
+  </div>
+</div></section>
+
+<footer><div class="wrap">Smart Buddy · ESP32-S3 + LVGL · Built by Lokii · <a class="js-gh" href="#">GitHub</a></div></footer>
+
+<div id="lb"><button aria-label="Close">×</button><img alt=""></div>
+
+<script>
+/* ====== EDIT THESE LINKS ====== */
+const GITHUB_URL   = "https://github.com/LokeshKumar-14/Desk-Buddy";
+const PLAYLIST_URL = "#"; /* paste your YouTube playlist link here */
+/* ============================== */
+document.querySelectorAll('.js-gh').forEach(a=>{a.href=GITHUB_URL;a.target="_blank";a.rel="noopener"});
+const pl=document.getElementById('playlist');pl.href=PLAYLIST_URL;
+
+/* Images: pichard/p1..p6 and picsoft/p1..p6. Extension is auto-detected. */
+const COUNT=6, EXT=['jpg','jpeg','png','webp','JPG','PNG'];
+function load(img){
+  const f=img.dataset.f,n=img.dataset.n;let i=0;
+  const next=()=>{ if(i>=EXT.length){img.replaceWith(ph(f,n));return;} img.src=f+'/p'+n+'.'+EXT[i++]; };
+  img.onerror=next;next();
+}
+function ph(f,n){const d=document.createElement('div');d.className='ph';d.textContent=f+'/p'+n+' goes here';return d}
+document.querySelectorAll('img[data-f]').forEach(load);
+
+const lb=document.getElementById('lb');
+function build(id,folder){
+  const box=document.getElementById(id);
+  for(let n=1;n<=COUNT;n++){
+    const s=document.createElement('div');s.className='shot';
+    const im=document.createElement('img');im.dataset.f=folder;im.dataset.n=n;im.loading='lazy';
+    im.alt=folder+' photo '+n;s.appendChild(im);box.appendChild(s);load(im);
+    s.onclick=()=>{const c=s.querySelector('img');if(c){lb.querySelector('img').src=c.src;lb.classList.add('on')}};
+  }
+}
+lb.onclick=()=>lb.classList.remove('on');
+addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove('on')});
+build('g-hw','pichard');build('g-web','picsoft');
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.getElementById('g-hw').hidden=b.dataset.g!=='hw';
+  document.getElementById('g-web').hidden=b.dataset.g!=='web';
+});
+
+/* Setup steps */
+const steps=[
+ ['Download', `<p>Get the project from GitHub.</p><ol><li>Open the repository and click <b>Code → Download ZIP</b>.</li><li><b>Extract</b> the ZIP to your Desktop.</li><li>Inside you will find a <code>library</code> folder and the <code>.ino</code> sketch.</li></ol>`],
+ ['Libraries', `<p>The <code>library</code> folder in the project goes into Arduino IDE.</p><ol><li>Open the <code>library</code> folder and copy every folder inside it.</li><li>Paste them into <code>Documents\\Arduino\\libraries</code>.</li><li>Close the Arduino IDE and open it again.</li></ol><div class="warn">Do not nest these folders inside another folder, or the IDE will not find them.</div>`],
+ ['ESP32 core', `<p>You need the right ESP32 package version.</p><ol><li>Open <b>Tools → Board → Boards Manager</b>.</li><li>Search for <code>esp32</code> by Espressif Systems.</li><li>Select version <b>2.0.14</b> and install it.</li></ol><div class="warn">Do not install the 3.x core. It can cause compile errors with LVGL and LovyanGFX.</div>`],
+ ['Board settings', `<p>Set these options in the <b>Tools</b> menu:</p><div class="set"><div><span>Board</span><b>ESP32S3 Dev Module</b></div><div><span>Port</span><b>Select your COM port</b></div><div><span>PSRAM</span><b>OPI PSRAM</b></div><div><span>Partition Scheme</span><b>Huge APP (3MB No OTA/1MB SPIFFS)</b></div><div><span>Flash Size</span><b>4MB (32Mb)</b></div><div><span>ESP32 core</span><b>2.0.14</b></div></div><div class="warn">Never set the flash size to 16MB. This board has only 4 MB of flash.</div>`],
+ ['Upload', `<ol><li>Connect the display to your PC with the USB-C cable.</li><li>Open the <code>.ino</code> file.</li><li>Enter your own Wi-Fi details in the config section.</li><li>Click <b>Upload</b>.</li><li>If the upload fails, hold <b>BOOT</b>, press <b>Reset</b>, then try again.</li></ol><div class="set"><div><span>Wi-Fi SSID</span><b>Your network name</b></div><div><span>Wi-Fi password</span><b>Your password</b></div></div><div class="warn">Never publish your real Wi-Fi password on a public GitHub repository.</div>`],
+ ['Use from your phone', `<ol><li>The display connects to Wi-Fi and shows its <b>IP address</b> on screen.</li><li>Connect your phone to the <b>same Wi-Fi</b>.</li><li>Open <code>http://IP-address</code> in your phone's browser.</li><li>Manage tasks, weather location, wallpapers, photos, timer and settings from there.</li></ol><p>When you upload an image you can choose <b>Set as Background</b> or <b>Add to Gallery</b>.</p>`]
+];
+const sn=document.getElementById('sn'),sp=document.getElementById('sp');
+steps.forEach((s,i)=>{
+  const b=document.createElement('button');b.innerHTML='<b>'+(i+1)+'</b>'+s[0];sn.appendChild(b);
+  const p=document.createElement('div');p.className='glass panel';p.innerHTML='<h3>'+s[0]+'</h3>'+s[1];sp.appendChild(p);
+  b.onclick=()=>{sn.querySelectorAll('button').forEach((x,j)=>x.classList.toggle('on',j===i));sp.querySelectorAll('.panel').forEach((x,j)=>x.classList.toggle('on',j===i))};
+});
+sn.firstChild.click();
+
+/* Claude prompt builder */
+const IDEAS={
+ restaurant:`A restaurant ordering system. The ESP32 hosts a mobile-friendly menu web page. Customers scan a QR code at the table, browse the menu with categories and prices, add items to a cart, enter a table number and place an order. Each new order appears on the 7-inch screen as a card with table number, items, quantity, total and time, with a visible "new order" alert. Staff can mark orders Preparing, Ready or Done by touching the screen or from a staff web page. The owner can edit menu items and prices from a phone. The screen also shows a QR code for the menu link.`,
+ cafe:`A cafe token and order-ready board. The counter staff add orders from a phone web page and each order gets a token number. The screen shows two large lists, "Preparing" and "Ready", and highlights newly ready tokens. Include a clock, today's order count and a screen theme that matches a cafe.`,
+ queue:`A clinic or salon queue display. Visitors scan a QR code, enter their name and join the queue from a phone web page. The screen shows the "Now serving" number, the next five numbers and an estimated wait time. Staff can call next, skip or finish a token from a protected phone page.`,
+ offers:`A shop offers and price board. The owner uploads offer images and edits product names, prices and discount tags from a phone web page. The screen shows them as a clean slideshow with a clock, date and weather, plus a "Today's special" highlight.`,
+ hostel:`A hostel notice board. The warden edits the mess menu for each day of the week, notices and important timings from a phone web page. The screen shows today's meals, the latest notices, a clock and the Wi-Fi name with a QR code.`,
+ office:`An office room and team board. The screen shows a large Free or Busy room status that can be switched with one touch or from a phone, a stand-up timer, a team to-do list, a clock and a calendar.`,
+ homectl:`A home control panel. The screen shows tiles for lights and fans grouped by room, each with a clear on/off state, and scene buttons such as "Good night" and "Away" that switch several outputs at once. The same controls are on a phone web page. Outputs drive relay modules through safe GPIO pins that do not conflict with the display, touch or SD card. Remember the last state after a reboot and keep a clear safety note about mains wiring in the README.`,
+ climate:`A climate panel. Read temperature and humidity from the DHT20 sensor (as used in the original Elecrow example) and show them with a history graph. Let the user set a temperature threshold that switches a fan relay on and off with hysteresis. Show the readings and controls on a phone web page too.`,
+ security:`A door and security status panel. Read door and window reed switches and a PIR motion sensor. Show each sensor as a tile with open/closed or motion state, a time of last change and a large alert banner when armed and triggered. Provide arm and disarm from the screen and from a protected phone web page, and keep an event log.`,
+ water:`A water tank and motor controller. Read the tank level from a level sensor, show it as a large tank graphic and start or stop the pump relay automatically with configurable low and high levels. Include dry-run protection with a maximum run time, manual override and a run history on the phone web page.`,
+ garden:`A garden watering controller. Read soil moisture and let the user set watering schedules and moisture thresholds for a pump or valve relay. Show moisture, next watering time and last watering on the screen, and let the user water manually from a phone web page.`,
+ energy:`An energy usage monitor. Read a current sensor module, calculate power and daily energy use, and show live power, a daily bar chart and an estimated bill using a unit price the user can set from the phone web page. Include clear calibration instructions.`,
+ custom:`[Describe your idea here: who will use it, what the web page does, and what appears on the screen.]`
+};
+const sel=document.getElementById('idea'),ta=document.getElementById('prompt');
+function makePrompt(){
+return `I am attaching the ZIP of my working project "Desk Buddy" (GitHub: ${GITHUB_URL}).
+It targets the Elecrow CrowPanel 7.0" HMI display: ESP32-S3-WROOM-1-N4R8, 800x480 RGB, 4 MB flash, 8 MB OPI PSRAM, capacitive touch, LVGL + LovyanGFX, Arduino IDE 2.x, ESP32 Arduino core 2.0.14, Windows 11.
+
+The display setup, touch driver, LVGL version, buffers and frame rate in this ZIP already work well on my hardware.
+
+STEP 1: Read the ZIP carefully before writing anything. Reuse its hardware initialization, pin mapping, display and touch configuration, library versions and LVGL settings exactly. Do not change pins, do not swap drivers, and never configure the firmware for 16 MB flash.
+
+STEP 2: Build a new, complete project on top of that base for this idea:
+${ta.dataset.idea||''}
+
+Requirements:
+- Modern glassmorphism-style LVGL interface that is readable at 800x480 with large touch targets.
+- ESP32 hosts a responsive web page for phones (HTML, CSS, JS), reachable on the local network. Show the IP address and a QR code on the screen.
+- Non-blocking code: no long delay() calls, Wi-Fi and network work must never freeze the UI.
+- Save settings and data persistently, and handle missing or corrupt data safely.
+- Keep memory use sensible for 4 MB flash and 8 MB PSRAM.
+- Never print Wi-Fi passwords to Serial and keep credentials in one clearly marked config section.
+
+Deliver:
+1. All source files organized in folders, plus a README.md with Arduino IDE settings, library versions and setup steps.
+2. A downloadable ZIP of the final project.
+3. A clear list of what was compiled, what was not verified, and what still needs testing on real hardware.
+
+If anything needed from my ZIP is missing, ask me before inventing hardware details.`;
+}
+function refresh(){ta.dataset.idea=IDEAS[sel.value];ta.value=makePrompt()}
+sel.onchange=refresh;refresh();
+document.getElementById('copy').onclick=async()=>{
+  const m=document.getElementById('copied');
+  try{await navigator.clipboard.writeText(ta.value)}catch(e){ta.select();document.execCommand('copy')}
+  m.textContent='Copied! Paste it into Claude.';setTimeout(()=>m.textContent='',2500);
+};
+</script>
+</body>
+</html>
